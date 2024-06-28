@@ -1,6 +1,6 @@
 #include <Network/RSA.hpp>
 #include <Network/SHA256.hpp>
-#include <Network/WiiLinkTypes.hpp>
+#include <Network/WiiLink.hpp>
 #include <core/rvl/DWC/DWC.hpp>
 #include <core/rvl/DWC/NHTTP.hpp>
 #include <core/rvl/ipc/ipc.hpp>
