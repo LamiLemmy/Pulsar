@@ -72,7 +72,7 @@ bool GenerateRandomSalt(u8 *out)
     return true;
 }
 
-s32 HandleResponse(void *block)
+s32 HandleResponse(u8 *block)
 {
     register wwfc_payload *__restrict payload =
         reinterpret_cast<wwfc_payload *>(block);
@@ -112,7 +112,26 @@ s32 HandleResponse(void *block)
     {
         asm(dcbf i, payload; sync; icbi i, payload; isync;);
     }
+        
+    // Disable unnecessary patches
+    u32 patchMask = WWFC_PATCH_LEVEL_CRITICAL | WWFC_PATCH_LEVEL_BUGFIX |
+                    WWFC_PATCH_LEVEL_SUPPORT;
+    for (wwfc_patch *patch = reinterpret_cast<wwfc_patch*>(
+                        block + payload->info.patch_list_offset
+                    ),
+                    *end = reinterpret_cast<wwfc_patch*>(
+                        block + payload->info.patch_list_end
+                    );
+         patch < end; patch++) {
+        if (patch->level == WWFC_PATCH_LEVEL_CRITICAL ||
+            (patch->level & patchMask)) {
+            continue;
+        }
 
+        // Otherwise disable the patch
+        patch->level |= WWFC_PATCH_LEVEL_DISABLED;
+    }
+        
     s32 (*entryFunction)(wwfc_payload *) =
         reinterpret_cast<s32 (*)(wwfc_payload *)>(
             reinterpret_cast<u8 *>(payload) + payload->info.entry_point);
@@ -134,7 +153,7 @@ void OnPayloadReceived(s32 result, void *response, void *userdata)
         return;
     }
 
-    s32 error = HandleResponse(s_payload);
+    s32 error = HandleResponse(reinterpret_cast<u8*>(s_payload));
     if (error != 0)
     {
         s_auth_error = error;
